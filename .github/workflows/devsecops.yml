@@ -30,7 +30,10 @@ jobs:
       # ---- Install Trivy scanner system-wide ----
       - name: Install Trivy
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh
+          TRIVY_VERSION=0.67.1
+          curl -sfL https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz -o trivy.tar.gz
+          tar zxvf trivy.tar.gz
+          sudo mv trivy /usr/local/bin/
           trivy --version
 
       # ---- Cache Trivy DB for faster scans ----
