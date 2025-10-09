@@ -1,52 +1,82 @@
-name: DevSecOps CI
+name: 🔒 DevSecOps CI
 
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:  # allow manual trigger
 
 jobs:
   build-and-scan:
+    name: 🔍 Build, Scan & Validate
     runs-on: ubuntu-22.04
+
+    # ======================================
+    # 🧩 Ensure only the latest run executes
+    # ======================================
+    concurrency:
+      group: devsecops-${{ github.ref }}
+      cancel-in-progress: true
 
     permissions:
       contents: read
       security-events: write
 
     steps:
-      # ===========================
-      # ---- 1️⃣ Checkout Code ----
-      # ===========================
+      # ======================================
+      # 🪣 1️⃣ Checkout source code
+      # ======================================
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ===========================
-      # ---- 2️⃣ Docker Setup ----
-      # ===========================
+      # ======================================
+      # 🐳 2️⃣ Set up Docker Buildx
+      # ======================================
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ===========================
-      # ---- 3️⃣ Build Image ----
-      # ===========================
-      - name: Build API Docker image
-        run: docker build -t devsecops-test-api:latest ./apps/api
+      # ======================================
+      # 🔐 3️⃣ Install & authenticate Infisical
+      # ======================================
+      - name: Install Infisical CLI
+        run: |
+          curl -s https://get.infisical.com | bash
+          infisical --version
 
-      # ===========================
-      # ---- 4️⃣ Install Trivy ----
-      # ===========================
+      - name: Inject Infisical secrets
+        env:
+          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
+        run: |
+          echo "🔑 Injecting Infisical secrets..."
+          infisical run \
+            --projectId ca60e1c3-5a72-44b8-8074-1c716b47f9c8 \
+            --env development \
+            -- printenv | grep DATABASE_URL || true
+
+      # ======================================
+      # 🏗️ 4️⃣ Build Docker image
+      # ======================================
+      - name: Build API Docker image
+        run: |
+          echo "🏗️ Building API Docker image..."
+          docker build -t devsecops-test-api:latest ./apps/api
+
+      # ======================================
+      # 🔍 5️⃣ Install Trivy scanner
+      # ======================================
       - name: Install Trivy
         run: |
+          echo "⬇️ Installing Trivy..."
           TRIVY_VERSION=0.67.1
           curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o trivy.tar.gz
           tar zxvf trivy.tar.gz
           sudo mv trivy /usr/local/bin/
           trivy --version
 
-      # ===========================
-      # ---- 5️⃣ Cache Trivy DB ----
-      # ===========================
+      # ======================================
+      # ⚡ 6️⃣ Cache Trivy vulnerability DB
+      # ======================================
       - name: Cache Trivy DB
         uses: actions/cache@v3
         with:
@@ -55,11 +85,12 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
 
-      # ===========================
-      # ---- 6️⃣ Run Trivy Scan ----
-      # ===========================
+      # ======================================
+      # 🧪 7️⃣ Run vulnerability scan
+      # ======================================
       - name: Run Trivy vulnerability scan
         run: |
+          echo "🔍 Running Trivy vulnerability scan..."
           mkdir -p $HOME/.trivycache
           trivy image \
             --cache-dir $HOME/.trivycache \
@@ -72,13 +103,15 @@ jobs:
             --ignorefile security/trivy/.trivyignore \
             devsecops-test-api:latest
 
-      # ===========================
-      # ---- 7️⃣ Fail on Criticals ----
-      # ===========================
+      # ======================================
+      # 🚨 8️⃣ Fail if HIGH/CRITICAL vulns exist
+      # ======================================
       - name: Fail on HIGH/CRITICAL vulnerabilities
         run: |
+          echo "🔎 Checking for HIGH/CRITICAL vulnerabilities..."
           HIGH_COUNT=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
           echo "High/Critical vulnerabilities found: $HIGH_COUNT"
+
           if [ "$HIGH_COUNT" -gt 0 ]; then
             echo "❌ Failing workflow due to HIGH/CRITICAL vulnerabilities."
             exit 1
@@ -86,9 +119,9 @@ jobs:
             echo "✅ No HIGH/CRITICAL vulnerabilities found."
           fi
 
-      # ===========================
-      # ---- 8️⃣ Upload Report ----
-      # ===========================
+      # ======================================
+      # 📦 9️⃣ Upload Trivy scan report (always)
+      # ======================================
       - name: Upload Trivy report
         if: always()
         uses: actions/upload-artifact@v4
@@ -96,8 +129,8 @@ jobs:
           name: trivy-report
           path: trivy-report.json
 
-      # ===========================
-      # ---- 9️⃣ Deployment Stub ----
-      # ===========================
+      # ======================================
+      # 🚀 🔟 Deployment placeholder
+      # ======================================
       - name: Deploy placeholder
         run: echo "🚀 Deployment steps will be added later."
