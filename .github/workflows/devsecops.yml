@@ -19,23 +19,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---- Set up Docker ----
+      # ---- Set up Docker Buildx ----
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ---- Build API Docker image locally ----
-      - name: Build API image
-        run: docker build -t devsecops-test-api:latest ./apps/api
+      # ---- Build API Docker image ----
+      - name: Build API Docker image
+        run: |
+          docker build -t devsecops-test-api:latest ./apps/api
 
-      # ---- Install Trivy scanner ----
+      # ---- Install Trivy ----
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh
+
+      # ---- Cache Trivy DB for faster scans ----
+      - name: Cache Trivy DB
+        uses: actions/cache@v3
+        with:
+          path: /root/.cache/trivy
+          key: trivy-db-${{ runner.os }}-${{ hashFiles('**/Dockerfile') }}
+          restore-keys: |
+            trivy-db-${{ runner.os }}-
 
       # ---- Run Trivy vulnerability scan ----
       - name: Run Trivy scan
         run: |
           trivy image \
+            --scanners vuln \
             --format json \
             --output trivy-report.json \
             --ignore-unfixed \
@@ -54,13 +65,13 @@ jobs:
             exit 1
           fi
 
-      # ---- Upload Trivy report as artifact (latest v4) ----
+      # ---- Upload Trivy report ----
       - name: Upload Trivy report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
           path: trivy-report.json
 
-      # ---- Placeholder for deployment ----
+      # ---- Deployment placeholder ----
       - name: Deploy placeholder
         run: echo "Deployment steps will be added later."
