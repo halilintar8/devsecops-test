@@ -1,0 +1,62 @@
+name: DevSecOps CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      # ---- Checkout source ----
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---- Setup Node for local build / tests ----
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # ---- (Optional) Install Podman or Docker engine ----
+      - name: Install Podman
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y podman make
+
+      # ---- Build container image ----
+      - name: Build API image
+        run: |
+          make build
+
+      # ---- Security scan with Trivy ----
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: devsecops-test-api:latest
+          format: 'table'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          exit-code: '0'   # don't fail the build yet on vulns
+
+      # ---- Example secret injection test ----
+      - name: Inject secrets from Infisical (optional)
+        if: github.ref == 'refs/heads/main'
+        env:
+          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
+        run: |
+          npm install -g infisical
+          infisical login --method=token --token "$INFISICAL_TOKEN"
+          echo "HELLO secret value:"
+          infisical export --format=json | jq '.HELLO'
+
+      # ---- Placeholder for future deploy ----
+      - name: Deploy to Minikube (placeholder)
+        run: echo "Deployment steps will be added later."
