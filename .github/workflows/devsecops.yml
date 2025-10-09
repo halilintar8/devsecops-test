@@ -27,7 +27,7 @@ jobs:
       - name: Build API Docker image
         run: docker build -t devsecops-test-api:latest ./apps/api
 
-      # ---- Install Trivy scanner system-wide ----
+      # ---- Install Trivy system-wide ----
       - name: Install Trivy
         run: |
           TRIVY_VERSION=0.67.1
@@ -45,7 +45,7 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
 
-      # ---- Run Trivy vulnerability scan (only vulnerabilities, no secrets) ----
+      # ---- Run Trivy vulnerability scan (only vulnerabilities) ----
       - name: Run Trivy scan
         run: |
           trivy image \
@@ -53,7 +53,7 @@ jobs:
             --format json \
             --output trivy-report.json \
             --ignore-unfixed \
-            --vuln-type os,library \
+            --pkg-types os,library \
             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
             --ignorefile security/trivy/.trivyignore \
             devsecops-test-api:latest
@@ -68,8 +68,9 @@ jobs:
             exit 1
           fi
 
-      # ---- Upload Trivy report ----
+      # ---- Upload Trivy report (always, even if previous step fails) ----
       - name: Upload Trivy report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-report
