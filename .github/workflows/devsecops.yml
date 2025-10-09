@@ -23,15 +23,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ---- Build API Docker image ----
+      # ---- Build API Docker image locally ----
       - name: Build API Docker image
-        run: |
-          docker build -t devsecops-test-api:latest ./apps/api
+        run: docker build -t devsecops-test-api:latest ./apps/api
 
-      # ---- Install Trivy ----
+      # ---- Install Trivy scanner system-wide ----
       - name: Install Trivy
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh
+          trivy --version
 
       # ---- Cache Trivy DB for faster scans ----
       - name: Cache Trivy DB
@@ -42,7 +42,7 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
 
-      # ---- Run Trivy vulnerability scan ----
+      # ---- Run Trivy vulnerability scan (only vulnerabilities, no secrets) ----
       - name: Run Trivy scan
         run: |
           trivy image \
