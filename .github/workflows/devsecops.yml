@@ -15,7 +15,7 @@ jobs:
       security-events: write
 
     steps:
-      # ---- Checkout repository ----
+      # ---- Checkout source code ----
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -23,10 +23,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ---- Build API Docker image ----
+      # ---- Build Docker image locally ----
       - name: Build API image
-        run: |
-          docker build -t devsecops-test-api:latest ./apps/api
+        run: docker build -t devsecops-test-api:latest ./apps/api
 
       # ---- Run Trivy vulnerability scan ----
       - name: Run Trivy scan
@@ -57,6 +56,6 @@ jobs:
           name: trivy-report
           path: trivy-report.json
 
-      # ---- (Optional) Deploy placeholder ----
-      - name: Deploy to Minikube (placeholder)
+      # ---- Optional: Placeholder for deployment ----
+      - name: Deploy placeholder
         run: echo "Deployment steps will be added later."
