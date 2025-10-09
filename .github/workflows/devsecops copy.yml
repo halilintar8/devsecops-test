@@ -27,11 +27,6 @@ jobs:
       - name: Build API image
         run: docker build -t devsecops-test-api:latest ./apps/api
 
-      # ---- Install Trivy scanner ----
-      - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh
-
       # ---- Run Trivy vulnerability scan ----
       - name: Run Trivy scan
         run: |
@@ -61,6 +56,6 @@ jobs:
           name: trivy-report
           path: trivy-report.json
 
-      # ---- Placeholder for deployment ----
+      # ---- Placeholder for future deployment ----
       - name: Deploy placeholder
         run: echo "Deployment steps will be added later."
