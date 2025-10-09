@@ -6,48 +6,53 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /usr/src/app
 
-# Install dependencies separately to leverage caching
+# Install dependencies separately (for better layer caching)
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
-# Copy source files
+# Copy app source
 COPY . .
 
-# Build the application (e.g., NestJS, TypeScript)
+# Build the application (e.g., NestJS / TypeScript)
 RUN npm run build
+
+# Remove dev dependencies to reduce final image size
+RUN npm prune --omit=dev
 
 # ===========================
 # ---- Runtime Stage ----
 # ===========================
 FROM node:20-alpine
 
-# Security: update system packages to latest patch
-RUN apk upgrade --no-cache
+# 1️⃣ Security: update base system packages
+RUN apk upgrade --no-cache && \
+    apk add --no-cache dumb-init && \
+    rm -rf /var/cache/apk/*
 
-# Create a non-root user
+# 2️⃣ Create a non-root user for least privilege
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Set working directory
+# 3️⃣ Set working directory
 WORKDIR /usr/src/app
 
-# Copy built app from builder stage
+# 4️⃣ Copy only necessary build artifacts and dependencies
 COPY --from=builder /usr/src/app/dist ./dist
-COPY package*.json ./
+COPY --from=builder /usr/src/app/package*.json ./
+COPY --from=builder /usr/src/app/node_modules ./node_modules
 
-# Install only production dependencies
-RUN npm ci --omit=dev && \
+# 5️⃣ Force update npm and fix vulnerabilities if any
+RUN npm install -g npm@latest && \
+    npm audit fix --force || true && \
     npm cache clean --force && \
     rm -rf /root/.npm /root/.cache
 
-# Ensure latest npm security patches for transitive deps
-RUN npm audit fix --force || true
-
-# Set ownership to non-root user
+# 6️⃣ Adjust file permissions
 RUN chown -R appuser:appgroup /usr/src/app
 USER appuser
 
-# Expose API port
+# 7️⃣ Expose API port
 EXPOSE 8000
 
-# Use non-root node process
+# 8️⃣ Start app safely using dumb-init (prevents zombie processes)
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/main.js"]
