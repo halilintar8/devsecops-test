@@ -30,23 +30,17 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # =====================================================
-      # 🔐 3️⃣ Install Infisical CLI and set PATH globally
+      # 🔐 3️⃣ Authenticate with Infisical
       # =====================================================
-      - name: Install Infisical CLI
-        run: |
-          echo "⬇️ Installing Infisical CLI..."
-          curl -s https://get.infisical.com | bash
-          # Add to PATH for subsequent steps
-          echo "$HOME/.infisical/bin" >> $GITHUB_PATH
-          # Verify installation
-          $HOME/.infisical/bin/infisical --version
+      - name: Authenticate with Infisical
+        uses: infisical/auth-action@v1
+        with:
+          infisical-token: ${{ secrets.INFISICAL_TOKEN }}
 
       # =====================================================
       # 🔑 4️⃣ Inject Infisical secrets
       # =====================================================
       - name: Inject Infisical secrets
-        env:
-          INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
         run: |
           echo "🔑 Injecting Infisical secrets..."
           infisical run \
