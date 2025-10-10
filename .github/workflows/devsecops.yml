@@ -35,7 +35,10 @@ jobs:
       - name: Authenticate with Infisical
         uses: Infisical/secrets-action@v1.0.15
         with:
-          infisical-token: ${{ secrets.INFISICAL_TOKEN }}
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: "devsecops-test-hi9-l"
+          env-slug: "development"
 
       # =====================================================
       # 🔑 4️⃣ Inject Infisical secrets
@@ -43,10 +46,7 @@ jobs:
       - name: Inject Infisical secrets
         run: |
           echo "🔑 Injecting Infisical secrets..."
-          infisical run \
-            --projectId ca60e1c3-5a72-44b8-8074-1c716b47f9c8 \
-            --env development \
-            -- printenv | grep DATABASE_URL || true
+          infisical run -- printenv | grep DATABASE_URL || true
 
       # =====================================================
       # 🏗️ 5️⃣ Build Docker image
