@@ -38,7 +38,7 @@ jobs:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
           client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
           project-slug: "devsecops-test-hi9-l"
-          env-slug: "development"
+          env-slug: "dev"
 
       # =====================================================
       # 🔑 4️⃣ Inject Infisical secrets
