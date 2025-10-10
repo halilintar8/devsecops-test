@@ -1,4 +1,4 @@
-name: 🔒 DevSecOps CI
+name: 🔒 DevSecOps CI/CD
 
 on:
   push:
@@ -7,12 +7,14 @@ on:
     branches: [main, master]
 
 jobs:
-  build-and-scan:
+  build-scan-deploy:
     runs-on: ubuntu-22.04
 
     permissions:
       contents: read
       security-events: write
+      id-token: write    # Required for OIDC Kubernetes auth
+      pull-requests: write
 
     steps:
       # =====================================================
@@ -28,13 +30,18 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       # =====================================================
-      # 🔐 3️⃣ Install and authenticate Infisical
+      # 🔐 3️⃣ Install Infisical CLI and set PATH globally
       # =====================================================
       - name: Install Infisical CLI
         run: |
+          echo "⬇️ Installing Infisical CLI..."
           curl -s https://get.infisical.com | bash
+          echo "PATH=$HOME/.infisical/bin:$PATH" >> $GITHUB_ENV
           infisical --version
 
+      # =====================================================
+      # 🔑 4️⃣ Inject Infisical secrets
+      # =====================================================
       - name: Inject Infisical secrets
         env:
           INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
@@ -46,15 +53,16 @@ jobs:
             -- printenv | grep DATABASE_URL || true
 
       # =====================================================
-      # 🏗️ 4️⃣ Build Docker image
+      # 🏗️ 5️⃣ Build Docker image
       # =====================================================
       - name: Build API Docker image
         run: |
-          echo "🏗️ Building Docker image..."
-          docker build -t devsecops-test-api:latest ./apps/api
+          IMAGE_TAG=devsecops-test-api:latest
+          echo "🏗️ Building Docker image $IMAGE_TAG..."
+          docker build -t $IMAGE_TAG ./apps/api
 
       # =====================================================
-      # 🔍 5️⃣ Install Trivy vulnerability scanner
+      # 🔍 6️⃣ Install Trivy vulnerability scanner
       # =====================================================
       - name: Install Trivy
         run: |
@@ -66,7 +74,7 @@ jobs:
           trivy --version
 
       # =====================================================
-      # ⚡ 6️⃣ Cache Trivy vulnerability database
+      # ⚡ 7️⃣ Cache Trivy vulnerability database
       # =====================================================
       - name: Cache Trivy DB
         uses: actions/cache@v3
@@ -77,11 +85,11 @@ jobs:
             trivy-db-${{ runner.os }}-
 
       # =====================================================
-      # 🧪 7️⃣ Run Trivy vulnerability scan
+      # 🧪 8️⃣ Run Trivy vulnerability scan
       # =====================================================
       - name: Run Trivy vulnerability scan
         run: |
-          echo "🔍 Running Trivy scan..."
+          IMAGE_TAG=devsecops-test-api:latest
           mkdir -p $HOME/.trivycache
           trivy image \
             --cache-dir $HOME/.trivycache \
@@ -92,10 +100,10 @@ jobs:
             --pkg-types os,library \
             --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL \
             --ignorefile security/trivy/.trivyignore \
-            devsecops-test-api:latest
+            $IMAGE_TAG
 
       # =====================================================
-      # 🚨 8️⃣ Fail if HIGH/CRITICAL vulnerabilities found
+      # 🚨 9️⃣ Fail if HIGH/CRITICAL vulnerabilities found
       # =====================================================
       - name: Fail on HIGH/CRITICAL vulnerabilities
         run: |
@@ -109,7 +117,7 @@ jobs:
           fi
 
       # =====================================================
-      # 📦 9️⃣ Upload Trivy scan report (always)
+      # 📦 🔟 Upload Trivy scan report (always)
       # =====================================================
       - name: Upload Trivy report
         if: always()
@@ -119,7 +127,23 @@ jobs:
           path: trivy-report.json
 
       # =====================================================
-      # 🚀 🔟 Deployment placeholder
+      # 🚀 1️⃣1️⃣ Deploy to Kubernetes (after scan passes)
       # =====================================================
-      - name: Deploy placeholder
-        run: echo "🚀 Deployment steps will be added later."
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.30.0'
+
+      - name: Authenticate to cluster
+        uses: azure/aks-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG }}
+
+      - name: Deploy Docker image to Kubernetes
+        run: |
+          IMAGE_TAG=devsecops-test-api:latest
+          echo "🚀 Updating Kubernetes Deployment..."
+          kubectl set image deployment/api-deployment \
+            api-container=$IMAGE_TAG --record
+          kubectl rollout status deployment/api-deployment
