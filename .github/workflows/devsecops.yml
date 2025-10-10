@@ -33,7 +33,7 @@ jobs:
       # 🔐 3️⃣ Authenticate with Infisical
       # =====================================================
       - name: Authenticate with Infisical
-        uses: infisical/infisical-actions/auth@v1
+        uses: Infisical/secrets-action@v1
         with:
           infisical-token: ${{ secrets.INFISICAL_TOKEN }}
 
