@@ -36,8 +36,11 @@ jobs:
         run: |
           echo "⬇️ Installing Infisical CLI..."
           curl -s https://get.infisical.com | bash
-          echo "PATH=$HOME/.infisical/bin:$PATH" >> $GITHUB_ENV
+          # Add to PATH immediately for this step
+          export PATH="$HOME/.infisical/bin:$PATH"
           infisical --version
+          # Persist PATH for future steps
+          echo "PATH=$HOME/.infisical/bin:$PATH" >> $GITHUB_ENV
 
       # =====================================================
       # 🔑 4️⃣ Inject Infisical secrets
