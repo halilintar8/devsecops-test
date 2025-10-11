@@ -125,6 +125,9 @@ jobs:
       # =====================================================
       # 🚀 1️⃣1️⃣ Deploy to Kubernetes (after scan passes)
       # =====================================================
+      - name: Deploy placeholder
+        run: echo "🚀 Deployment skipped: Azure credentials not set yet."
+
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
