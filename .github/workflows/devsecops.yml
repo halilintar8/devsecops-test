@@ -1,5 +1,5 @@
 ---
-name: "🔒 DevSecOps CI/CD Pipeline"
+name: "DevSecOps CI/CD 🔒"
 
 on:
   push:
@@ -19,19 +19,19 @@ jobs:
 
     steps:
       # =====================================================
-      # 🧩 1️⃣ Checkout repository
+      # 1️⃣ Checkout repository
       # =====================================================
       - name: "Checkout repository"
         uses: actions/checkout@v4
 
       # =====================================================
-      # 🐳 2️⃣ Set up Docker Buildx
+      # 2️⃣ Set up Docker Buildx
       # =====================================================
       - name: "Set up Docker Buildx"
         uses: docker/setup-buildx-action@v3
 
       # =====================================================
-      # 🔐 3️⃣ Load Infisical secrets
+      # 3️⃣ Load Infisical secrets
       # =====================================================
       - name: "Load Infisical secrets"
         uses: Infisical/secrets-action@v1.0.15
@@ -42,7 +42,7 @@ jobs:
           env-slug: "dev"
 
       # =====================================================
-      # 🔎 4️⃣ Verify injected secrets
+      # 4️⃣ Verify injected secrets
       # =====================================================
       - name: "Verify injected secrets"
         run: |
@@ -51,7 +51,7 @@ jobs:
           echo "NODE_ENV: ${NODE_ENV:-Not Found}"
 
       # =====================================================
-      # 🏗️ 5️⃣ Build Docker image
+      # 5️⃣ Build Docker image
       # =====================================================
       - name: "Build API Docker image"
         run: |
@@ -60,7 +60,7 @@ jobs:
           docker build -t "${IMAGE_TAG}" ./apps/api
 
       # =====================================================
-      # 🧰 6️⃣ Install Trivy vulnerability scanner
+      # 6️⃣ Install Trivy vulnerability scanner
       # =====================================================
       - name: "Install Trivy"
         run: |
@@ -74,7 +74,7 @@ jobs:
           trivy --version
 
       # =====================================================
-      # ⚡ 7️⃣ Cache Trivy vulnerability database
+      # 7️⃣ Cache Trivy vulnerability database
       # =====================================================
       - name: "Cache Trivy DB"
         uses: actions/cache@v3
@@ -85,14 +85,14 @@ jobs:
             trivy-db-${{ runner.os }}-
 
       # =====================================================
-      # 🧪 8️⃣ Run Trivy vulnerability scan
+      # 8️⃣ Run Trivy vulnerability scan
       # =====================================================
       - name: "Run Trivy vulnerability scan"
         run: |
           IMAGE_TAG="devsecops-test-api:latest"
-          mkdir -p "$HOME/.trivycache"
+          mkdir -p "${HOME}/.trivycache"
           trivy image \
-            --cache-dir "$HOME/.trivycache" \
+            --cache-dir "${HOME}/.trivycache" \
             --scanners vuln \
             --format json \
             --output trivy-report.json \
@@ -103,13 +103,12 @@ jobs:
             "${IMAGE_TAG}"
 
       # =====================================================
-      # 🚨 9️⃣ Fail if HIGH/CRITICAL vulnerabilities found
+      # 9️⃣ Fail if HIGH/CRITICAL vulnerabilities found
       # =====================================================
       - name: "Fail on HIGH/CRITICAL vulnerabilities"
         run: |
-          HIGH_COUNT=$(jq '[.Results[].Vulnerabilities[]? 
-            | select(.Severity=="HIGH" or .Severity=="CRITICAL")] 
-            | length' trivy-report.json)
+          HIGH_COUNT=$(jq '[.Results[].Vulnerabilities[]? |
+            select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
           echo "🔎 High/Critical vulnerabilities found: ${HIGH_COUNT}"
           if [ "${HIGH_COUNT}" -gt 0 ]; then
             echo "❌ Failing workflow due to HIGH/CRITICAL vulnerabilities."
@@ -119,17 +118,18 @@ jobs:
           fi
 
       # =====================================================
-      # 📦 🔟 Upload Trivy scan report (always)
+      # 🔟 Upload Trivy scan report (always)
       # =====================================================
       - name: "Upload Trivy report"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: "trivy-report"
-          path: "trivy-report.json"
+          path: trivy-report.json
 
       # =====================================================
-      # 🚀 1️⃣1️⃣ Deploy placeholder (safe default)
+      # 1️⃣1️⃣ Deploy placeholder (safe default)
       # =====================================================
       - name: "Deploy placeholder"
-        run: echo "🚀 Deployment skipped: Azure credentials not set yet."
+        run: |
+          echo "🚀 Deployment skipped: Azure credentials not set yet."
