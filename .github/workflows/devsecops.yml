@@ -1,4 +1,4 @@
-name: DevSecOps CI/CD 🔒
+name: "DevSecOps CI/CD 🔒"
 
 on:
   push:
@@ -20,19 +20,19 @@ jobs:
       # =====================================================
       # 1️⃣ Checkout repository
       # =====================================================
-      - name: Checkout repository
+      - name: "Checkout repository"
         uses: actions/checkout@v4
 
       # =====================================================
       # 2️⃣ Set up Docker Buildx
       # =====================================================
-      - name: Set up Docker Buildx
+      - name: "Set up Docker Buildx"
         uses: docker/setup-buildx-action@v3
 
       # =====================================================
       # 3️⃣ Load Infisical secrets
       # =====================================================
-      - name: Load Infisical secrets
+      - name: "Load Infisical secrets"
         uses: Infisical/secrets-action@v1.0.15
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
@@ -43,7 +43,7 @@ jobs:
       # =====================================================
       # 4️⃣ Verify injected secrets
       # =====================================================
-      - name: Verify injected secrets
+      - name: "Verify injected secrets"
         run: |
           echo "🔑 Checking if Infisical secrets are available..."
           echo "DATABASE_URL: ${DATABASE_URL:-Not Found}"
@@ -52,7 +52,7 @@ jobs:
       # =====================================================
       # 5️⃣ Build Docker image
       # =====================================================
-      - name: Build API Docker image
+      - name: "Build API Docker image"
         run: |
           IMAGE_TAG=devsecops-test-api:latest
           echo "🏗️ Building Docker image $IMAGE_TAG..."
@@ -61,7 +61,7 @@ jobs:
       # =====================================================
       # 6️⃣ Install Trivy vulnerability scanner
       # =====================================================
-      - name: Install Trivy
+      - name: "Install Trivy"
         run: |
           echo "⬇️ Installing Trivy..."
           TRIVY_VERSION=0.67.1
@@ -73,7 +73,7 @@ jobs:
       # =====================================================
       # 7️⃣ Cache Trivy vulnerability database
       # =====================================================
-      - name: Cache Trivy DB
+      - name: "Cache Trivy DB"
         uses: actions/cache@v3
         with:
           path: ~/.trivycache
@@ -84,7 +84,7 @@ jobs:
       # =====================================================
       # 8️⃣ Run Trivy vulnerability scan
       # =====================================================
-      - name: Run Trivy vulnerability scan
+      - name: "Run Trivy vulnerability scan"
         run: |
           IMAGE_TAG=devsecops-test-api:latest
           mkdir -p $HOME/.trivycache
@@ -102,7 +102,7 @@ jobs:
       # =====================================================
       # 9️⃣ Fail if HIGH/CRITICAL vulnerabilities found
       # =====================================================
-      - name: Fail on HIGH/CRITICAL vulnerabilities
+      - name: "Fail on HIGH/CRITICAL vulnerabilities"
         run: |
           HIGH_COUNT=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH" or .Severity=="CRITICAL")] | length' trivy-report.json)
           echo "🔎 High/Critical vulnerabilities found: $HIGH_COUNT"
@@ -116,7 +116,7 @@ jobs:
       # =====================================================
       # 🔟 Upload Trivy scan report (always)
       # =====================================================
-      - name: Upload Trivy report
+      - name: "Upload Trivy report"
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -124,7 +124,7 @@ jobs:
           path: trivy-report.json
 
       # =====================================================
-      # 1️⃣1️⃣ Deploy placeholder
+      # 1️⃣1️⃣ Deploy placeholder (safe default)
       # =====================================================
-      - name: Deploy placeholder
+      - name: "Deploy placeholder"
         run: echo "🚀 Deployment skipped: Azure credentials not set yet."
